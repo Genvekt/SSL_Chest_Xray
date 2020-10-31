@@ -1,43 +1,47 @@
 import torch
+from torch.utils.data import Dataset
+from PIL import Image
 import numpy as np
 from pathlib import Path
-from PIL import Image
-from torchvision import transforms
-from torch.utils.data import Dataset
-import pandas as pd
-import pydicom
 
-class RSNADataset(Dataset):
-    
+class ChestPneumoniaDataset(Dataset):
     def __init__(self, dataset_dir:Path, transform=None, part="full"):
         """
-        Initialise RSNA dataset
-        URL: https://www.kaggle.com/c/rsna-pneumonia-detection-challenge
+        Initialise Chest Preumonia dataset
+        URL: https://www.kaggle.com/paultimothymooney/chest-xray-pneumonia
         
         Args:
             dataset_dir (Path): path to dataset directory
             transform (callable, optional): Preprocessing transforms
             part (str): Type of partition
-                       - "full" : Use the whole dataset, test has no labels
-                       - "train_val": Use only train_val partition
-                       - "test": Use only test partition, has no labels
+                       - "full" : Use the whole dataset
+                       - "train_val": Use both train and val partition
+                       - "train": Use only train partition
+                       - "val" : Use only val [artition
+                       - "test": Use only test partition
         """
         self.transform = transform
-        self.part = part
         
-        # Train Partition
-        self.train_image_dir = dataset_dir / "stage_2_train_images"
-        self.train_csv = []
-        if part in ["full", "train_val"]:
-            csv_file = dataset_dir / "stage_2_train_labels.csv"
-            self.train_csv = pd.read_csv(csv_file).drop_duplicates(subset=['patientId'])
+        self.pneumo_imgs = []
+        self.norm_imgs = []
         
-        #Test partition
-        self.test_image_dir = dataset_dir / "stage_2_test_images"
-        self.test_csv = []
+        if part in ["full", "train_val", "train"]:
+            pneumo_dir = dataset_dir / "train/PNEUMONIA"
+            norm_dir = dataset_dir / "train/NORMAL"
+            self.pneumo_imgs += list(pneumo_dir.glob("*.jpeg"))
+            self.norm_imgs += list(norm_dir.glob("*.jpeg"))
+            
+        if part in ["full", "train_val", "val"]:
+            pneumo_dir = dataset_dir / "val/PNEUMONIA"
+            norm_dir = dataset_dir / "val/NORMAL"
+            self.pneumo_imgs += list(pneumo_dir.glob("*.jpeg"))
+            self.norm_imgs += list(norm_dir.glob("*.jpeg"))
+            
         if part in ["full", "test"]:
-            csv_file = dataset_dir / "stage_2_sample_submission.csv"
-            self.test_csv = pd.read_csv(csv_file)
+            pneumo_dir = dataset_dir / "test/PNEUMONIA"
+            norm_dir = dataset_dir / "test/NORMAL"
+            self.pneumo_imgs += list(pneumo_dir.glob("*.jpeg"))
+            self.norm_imgs += list(norm_dir.glob("*.jpeg"))
         
         self.label_to_idx = {
             "No Pneumonia": 0,
@@ -47,6 +51,7 @@ class RSNADataset(Dataset):
             0: "No Pneumonia",
             1: "Pneumonia"
         }
+        
         
     def label_to_one_hot(self, label):
         """
@@ -68,11 +73,13 @@ class RSNADataset(Dataset):
         else:
             return self.idx_to_label[np.argmax(one_hot_label)]
     
+        
+        
     def __len__(self):
         """
         Get the size of the dataset
         """
-        return len(self.train_csv) + len(self.test_csv)
+        return len(self.pneumo_imgs) + len(self.norm_imgs)
     
     
     def __getitem__(self, idx):
@@ -82,36 +89,26 @@ class RSNADataset(Dataset):
         # Convert torch tensors if given
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        
+            
         image_path = None
         label = None
         
         # Get image and label
-        if self.part in ["full", "train_val"]:
-            if idx < len(self.train_csv):
-                image_path = self.train_image_dir / (self.train_csv.iloc[idx, 0]+'.dcm')
-                label = self.idx_to_label[self.train_csv.iloc[idx, 5]]
-            else:
-                idx = idx - len(self.train_csv)
-                image_path = self.test_image_dir / (self.test_csv.iloc[idx, 0]+'.dcm')
+        if idx < len(self.pneumo_imgs):
+            label = "Pneumonia"
+            image_name = self.pneumo_imgs[idx]
         else:
-            image_path = self.test_image_dir / (self.test_csv.iloc[idx, 0]+'.dcm')
-        image = pydicom.dcmread(image_path)
-        image = Image.fromarray(image.pixel_array.astype(np.uint8))
+            label = "No Pneumonia"
+            image_name = self.norm_imgs[idx-len(self.pneumo_imgs)]
+        
+        image = Image.open(image_name)
         if self.transform:
             image = self.transform(image)
-            
-        # Convert label to one hot, will be all zeros if label is None (for test data)   
         one_hot_label = self.label_to_one_hot(label)
         
+        # Form output
         sample = {'image': image, 
                   'one_hot_label':  torch.tensor(one_hot_label).float(), 
                   'label':label}
+        
         return sample
-        
-        
-        
-            
-            
-        
-        

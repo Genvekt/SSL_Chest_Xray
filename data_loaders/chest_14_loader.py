@@ -91,7 +91,7 @@ class Chest14Dataset(Dataset):
         """
         Get the size of the dataset
         """
-        return len(self.scv_data)
+        return len(self.csv_data)
     
     
     def __getitem__(self, idx):
@@ -103,8 +103,8 @@ class Chest14Dataset(Dataset):
             idx = idx.tolist()
         
         # Read and preprocess image
-        img_name = self.image_dir / self.csv_data.iloc[idx, 0]
-        image = Image.open(img_name)
+        image_name = self.image_dir / self.csv_data.iloc[idx, 0]
+        image = Image.open(image_name)
         if self.transform:
             image = self.transform(image)
         
