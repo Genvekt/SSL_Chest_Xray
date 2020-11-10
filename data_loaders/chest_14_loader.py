@@ -20,8 +20,8 @@ class Chest14Dataset(Dataset):
                        - "full" : Use the whole dataset
                        - "train_val": Use only train_val partition
                        - "test": Use only test partition
-            
         """
+        self.available_partitions = ["full", "train_val", "test"]
         self.transform = transform
         
         # Define pathes to all important files, read label data
@@ -29,37 +29,33 @@ class Chest14Dataset(Dataset):
         self.image_dir = dataset_dir / "images"
  
         # Define label to idx mapping
-        self.label_to_idx = {
-            "No Finding": 0,
-            "Atelectasis": 1,
-            "Cardiomegaly": 2,
-            "Effusion": 3,
-            "Infiltration": 4,
-            "Mass": 5,
-            "Nodule": 6,
-            "Pneumonia": 7,
-            "Pneumothorax": 8,
-            "Consolidation": 9,
-            "Edema": 10,
-            "Emphysema": 11,
-            "Fibrosis": 12,
-            "Pleural_Thickening": 13,
-            "Hernia": 14
-        }
+        self.labels = [ "No Finding", "Atelectasis", "Cardiomegaly", "Effusion", "Infiltration",
+                        "Mass", "Nodule", "Pneumonia", "Pneumothorax","Consolidation","Edema", "Emphysema",
+                        "Fibrosis", "Pleural_Thickening", "Hernia"]
         
+        
+        # Define label to idx mapping
+        self.label_to_idx = {}
+        for i,label in enumerate(self.labels):
+            self.label_to_idx[label] = i
+            
         # Define idx to label mapping
         self.idx_to_label = {}
         for label, idx in self.label_to_idx.items():
             self.idx_to_label[idx] = label
         
         # Filter data based on defined partition type
+        if part in ["train", "val"]:
+            part = "train_val"
         if part in ["train_val", "test"]:
             split_file = dataset_dir / (part + "_list.txt")
             image_names  = []
             with open(split_file, "r") as f:
                 image_names = f.read().split("\n")
             self.csv_data = self.csv_data[self.csv_data['Image Index'].isin(image_names)]
-            
+        
+        # Delete records with unwanted labels
+        
             
     def label_to_one_hot(self, label_string):
         """
@@ -71,6 +67,7 @@ class Chest14Dataset(Dataset):
             idx = self.label_to_idx[label]
             one_hot_label[idx] = 1
         return one_hot_label
+    
         
         
     def one_hot_to_label(self, one_hot_label):
@@ -104,7 +101,7 @@ class Chest14Dataset(Dataset):
         
         # Read and preprocess image
         image_name = self.image_dir / self.csv_data.iloc[idx, 0]
-        image = Image.open(image_name)
+        image = Image.open(image_name).convert('RGB')
         if self.transform:
             image = self.transform(image)
         

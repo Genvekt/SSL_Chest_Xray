@@ -22,7 +22,10 @@ class RSNADataset(Dataset):
                        - "train_val": Use only train_val partition
                        - "test": Use only test partition, has no labels
         """
+        self.available_partitions = ["full", "train_val", "test"]
         self.transform = transform
+        if part in ["train", "val"]:
+            part = "train_val"
         self.part = part
         
         # Train Partition
@@ -101,13 +104,14 @@ class RSNADataset(Dataset):
         if self.transform:
             image = self.transform(image)
             
+        label = self.label_to_idx[label]
         # Convert label to one hot, will be all zeros if label is None (for test data)   
-        one_hot_label = self.label_to_one_hot(label)
+        #one_hot_label = self.label_to_one_hot(label)
         
-        sample = {'image': image, 
-                  'one_hot_label':  torch.tensor(one_hot_label).float(), 
-                  'label':label}
-        return sample
+#         sample = {'image': image, 
+#                   'one_hot_label':  torch.tensor(one_hot_label).float(), 
+#                   'label':label}
+        return image, label
         
         
         

@@ -20,6 +20,7 @@ class ChestPneumoniaDataset(Dataset):
                        - "val" : Use only val [artition
                        - "test": Use only test partition
         """
+        self.available_partitions = ["full", "train_val", "train", "val", "test"]
         self.transform = transform
         
         self.pneumo_imgs = []
