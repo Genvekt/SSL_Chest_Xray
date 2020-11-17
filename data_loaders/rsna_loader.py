@@ -100,7 +100,8 @@ class RSNADataset(Dataset):
         else:
             image_path = self.test_image_dir / (self.test_csv.iloc[idx, 0]+'.dcm')
         image = pydicom.dcmread(image_path)
-        image = Image.fromarray(image.pixel_array.astype(np.uint8))
+        image = np.stack((image.pixel_array.astype(np.uint8),)*3, axis=-1)
+        image = Image.fromarray(image)
         if self.transform:
             image = self.transform(image)
             

@@ -2,39 +2,21 @@ import torch
 from pathlib import Path
 import numpy as np
 from torch.utils.data import random_split, Dataset
-from data_loaders.chest_14_loader import Chest14Dataset
-from data_loaders.rsna_loader import RSNADataset
-from data_loaders.chest_pneumonia_loader import ChestPneumoniaDataset
+from data_loaders.chest_14_data_module import Chest14DataModule
 
 
 DATASETS = {
-    "RSNA": [Path("/datasets/rsna"), RSNADataset],
-    "Chest14": [Path("/datasets/chest-14"), Chest14Dataset],
-    "ChestPneumonia": [Path("/datasets/chest-xray-pneumonia"), ChestPneumoniaDataset],
+    #"RSNA": [Path("/datasets/rsna"), RSNADataset],
+    "Chest14": [Path("/datasets/chest-14"), Chest14DataModule]
+#     "ChestPneumonia": [Path("/datasets/chest-xray-pneumonia"), ChestPneumoniaDataset],
 }
 
-VAL_SPLIT = 0.2
-RANDOM_SEED = 1234
 
-
-def get_data_loader(dataset_name:str, transform=None, part="full"):
+def get_data_module(dataset_name:str, **kwargs):
     if dataset_name in DATASETS:
-        dataset_dir, dataset_class = DATASETS[dataset_name]
+        dataset_dir, datamodule_class = DATASETS[dataset_name]
         
-        data_volume = dataset_class(dataset_dir, transform=transform, part=part)
-        if part in ["train", "val"] and part not in data_volume.available_partitions:
-            # Split "train_val" into "train" and "val"
-            val_len = int(len(data_volume)*VAL_SPLIT)
-            train_len = len(data_volume) - val_len 
-            train_data, val_data = random_split(data_volume, 
-                                                [train_len, val_len], 
-                                                generator=torch.Generator().manual_seed(RANDOM_SEED))
-            if part == "train":
-                return train_data
-            else:
-                return val_data
-        else:
-            return data_volume
+        return datamodule_class(dataset_dir, **kwargs)
             
     else:
         print("Undefined dataset:", dataset_name)

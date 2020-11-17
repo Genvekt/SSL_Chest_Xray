@@ -8,7 +8,7 @@ import pandas as pd
 
 class Chest14Dataset(Dataset):
     
-    def __init__(self, dataset_dir:Path, transform=None, part="full"):
+    def __init__(self, dataset_dir:Path, transform=None, part="full", binary=True):
         """
         Initialise chest-14 dataset
         URL: https://www.kaggle.com/nih-chest-xrays/data
@@ -54,7 +54,7 @@ class Chest14Dataset(Dataset):
                 image_names = f.read().split("\n")
             self.csv_data = self.csv_data[self.csv_data['Image Index'].isin(image_names)]
         
-        # Delete records with unwanted labels
+        self.binary = binary
         
             
     def label_to_one_hot(self, label_string):
@@ -68,7 +68,18 @@ class Chest14Dataset(Dataset):
             one_hot_label[idx] = 1
         return one_hot_label
     
-        
+    def label_to_one_hot_binary(self, label_string):
+        """
+        Convert string label to one hot array based on Pathology / No finding
+        """
+        one_hot_label = np.zeros(2)
+        idx = 0
+        if label_string == "No Finding":
+            one_hot_label[0] = 1
+        else:
+            one_hot_label[1] = 1
+            idx = 1
+        return one_hot_label, idx 
         
     def one_hot_to_label(self, one_hot_label):
         """
@@ -107,11 +118,20 @@ class Chest14Dataset(Dataset):
         
         # Get label and its one hot encoding
         label = self.csv_data.iloc[idx, 1]
-        one_hot_label = self.label_to_one_hot(label)
+        if self.binary:
+            one_hot_label, label_idx = self.label_to_one_hot_binary(label)
+            # Form output
+            sample = {'image': image, 
+                      'one_hot_label':  torch.tensor(one_hot_label).float(), 
+                      'label':label_idx,
+                      'text_label':label}
         
-        # Form output
-        sample = {'image': image, 
-                  'one_hot_label':  torch.tensor(one_hot_label).float(), 
-                  'label':label}
+        else:
+            one_hot_label = self.label_to_one_hot(label)
+            # Form output
+            sample = {'image': image.contiguous(), 
+                      'one_hot_label':  torch.tensor(one_hot_label).float(), 
+                      'label':label,
+                      'text_label':label}
         
         return sample
