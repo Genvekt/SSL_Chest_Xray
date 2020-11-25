@@ -17,11 +17,13 @@ def showInRow(list_of_images, titles = None,
             subplot.set_title(titles[idx])
         img = list_of_images[idx]
         if tensor:
-            img = tensor_to_img(img)
-            img = to_gray(img)
+#             img = tensor_to_img(img)
+#             img = to_gray(img)
+              img = img.permute(1, 2, 0)
         
-        img = np.array(img)
-        
+        if len(img.shape) >2:
+            img = img[:,:,0]
+            
         cmap = 'gray' if (len(img.shape) == 2 or img.shape[2] == 1) else None
         subplot.imshow(img, cmap=cmap)
         if disable_ticks:

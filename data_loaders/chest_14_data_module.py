@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pytorch_lightning import LightningDataModule
 import torch
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, RandomSampler
 
 
 from data_loaders.chest_14_dataset import Chest14Dataset
@@ -17,6 +17,7 @@ class Chest14DataModule(LightningDataModule):
                  seed : int = 123456, 
                  binary: bool = True,
                  transform = None,
+                 train_fraction = None,
                  *args,
                  **kwargs,):
         """
@@ -35,6 +36,7 @@ class Chest14DataModule(LightningDataModule):
         self.binary = binary
         self.val_split = val_split
         self.transform = self.default_transforms() if transform is None else transform
+        self.train_fraction = train_fraction
     
     
     def default_transforms(self):
@@ -72,14 +74,29 @@ class Chest14DataModule(LightningDataModule):
             train_data, _ = random_split(dataset, 
                                          [train_len, val_len], 
                                          generator=torch.Generator().manual_seed(self.seed))
-        loader = DataLoader(
-            train_data,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.num_workers,
-            pin_memory=True,
-            drop_last=True
-        )
+        if self.train_fraction is not None:
+            # Create sampler to get only fraction of test data
+            sampler = RandomSampler(data_source=train_data, 
+                                    num_samples=int(len(train_data) * self.train_fraction),
+                                    replacement=True,
+                                    generator=torch.Generator().manual_seed(self.seed))
+            loader = DataLoader(
+                train_data,
+                batch_size=self.batch_size,
+                sampler=sampler,
+                num_workers=self.num_workers,
+                pin_memory=True,
+                drop_last=True
+            )
+        else:
+            loader = DataLoader(
+                train_data,
+                batch_size=self.batch_size,
+                shuffle=True,
+                num_workers=self.num_workers,
+                pin_memory=True,
+                drop_last=True
+            )
         return loader
     
     
