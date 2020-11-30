@@ -41,7 +41,7 @@ class SimCLRTrainChestTransform(object):
         x = sample()
         (xi, xj) = transform(x)
     """
-    def __init__(self,height: int = 224)
+    def __init__(self,height: int = 224):
 
         
         self.height = height
