@@ -1,5 +1,5 @@
 from pathlib import Path
-
+from torchvision import transforms
 from pytorch_lightning import LightningDataModule
 import torch
 from torch.utils.data import DataLoader, random_split, RandomSampler
@@ -61,7 +61,6 @@ class Chest14DataModule(LightningDataModule):
         """
         Chest14 train data
         """
-
         dataset = self.DATASET(self.dataset_dir, 
                                transform=self.transform, 
                                part="train", 

@@ -1,0 +1,23 @@
+pipeline:
+  baseline: True
+  pretrain: False
+  finetune: True
+
+weights:
+
+target_dataset: 
+  batch_size: 16
+  seed: 123456
+  train_fraction: 1
+  num_workers: 2
+
+target_transform:
+  height: 256
+
+baseline:
+  model: "resnet18"
+  pretrained: True
+
+defaults:
+  - target_dataset: chest14
+  - transform: basic
