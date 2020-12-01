@@ -1,0 +1,7 @@
+pipeline:
+  _target_: models.baseline.BaseLineClassifierAdam
+  params:
+    linear: True
+    learning_rate: 0.00003
+    b1: 0.9
+    b2: 0.999

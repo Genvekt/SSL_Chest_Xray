@@ -8,7 +8,7 @@ import pandas as pd
 
 class Chest14Dataset(Dataset):
     
-    def __init__(self, dataset_dir:Path, transform=None, part="full", binary=True):
+    def __init__(self, dataset_dir:str, transform=None, part="full", binary=True):
         """
         Initialise chest-14 dataset
         URL: https://www.kaggle.com/nih-chest-xrays/data
@@ -23,7 +23,8 @@ class Chest14Dataset(Dataset):
         """
         self.available_partitions = ["full", "train_val", "test"]
         self.transform = transform
-        
+        dataset_dir = Path(dataset_dir)
+        print(type(dataset_dir))
         # Define pathes to all important files, read label data
         self.csv_data = pd.read_csv(dataset_dir / "Data_Entry_2017.csv")
         self.image_dir = dataset_dir / "images"

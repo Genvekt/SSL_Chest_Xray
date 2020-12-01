@@ -2,22 +2,23 @@ from pathlib import Path
 from torchvision import transforms
 from pytorch_lightning import LightningDataModule
 import torch
-from torch.utils.data import DataLoader, random_split, RandomSampler
+from torch.utils.data import DataLoader
+from data_loaders.chexpert_dataset import CheXpertDataset
+from torch.utils.data import DataLoader, RandomSampler
 
-
-from data_loaders.chest_14_dataset import Chest14Dataset
-
-class Chest14DataModule(LightningDataModule):
-    name = "Chest14"
+class CheXpertDataModule(LightningDataModule):
+    name = "CheXpert"
     def __init__(self, 
                  dataset_dir: str,
+                 csv_path:str,
                  val_split: int = 0.2,
                  num_workers: int = 2,
                  batch_size: int = 16,
                  seed : int = 123456, 
-                 binary: bool = True,
+                 target_class = None,
                  transform = None,
                  train_fraction = None,
+
                  *args,
                  **kwargs,):
         """
@@ -28,12 +29,13 @@ class Chest14DataModule(LightningDataModule):
             seed
         """
         super().__init__(*args, **kwargs)
-        self.DATASET = Chest14Dataset
+        self.DATASET = CheXpertDataset
+        self.csv_path = csv_path
         self.dataset_dir = dataset_dir
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.seed = seed
-        self.binary = binary
+        self.target_class = target_class
         self.val_split = val_split
         self.transform = self.default_transforms() if transform is None else transform
         self.train_fraction = train_fraction
@@ -51,7 +53,7 @@ class Chest14DataModule(LightningDataModule):
         """
         Return number of available classes
         """
-        if self.binary:
+        if self.target_class is not None:
             return 2
         else:
             return 15
@@ -59,28 +61,23 @@ class Chest14DataModule(LightningDataModule):
         
     def train_dataloader(self):
         """
-        Chest14 train data
+        CheXpert train data
         """
-        dataset = self.DATASET(self.dataset_dir, 
+        dataset = self.DATASET(self.dataset_dir,
+                               csv_path=self.csv_path, 
                                transform=self.transform, 
                                part="train", 
-                               binary=self.binary)
+                               target_class=self.target_class,
+                               seed=self.seed)
         
-        if "train" not in dataset.available_partitions:
-            # Split "train_val" into "train" and "val"
-            val_len = int(len(dataset)*self.val_split)
-            train_len = len(dataset) - val_len 
-            train_data, _ = random_split(dataset, 
-                                         [train_len, val_len], 
-                                         generator=torch.Generator().manual_seed(self.seed))
         if self.train_fraction is not None:
             # Create sampler to get only fraction of test data
-            sampler = RandomSampler(data_source=train_data, 
-                                    num_samples=int(len(train_data) * self.train_fraction),
+            sampler = RandomSampler(data_source=dataset, 
+                                    num_samples=int(len(dataset) * self.train_fraction),
                                     replacement=True,
                                     generator=torch.Generator().manual_seed(self.seed))
             loader = DataLoader(
-                train_data,
+                dataset,
                 batch_size=self.batch_size,
                 sampler=sampler,
                 num_workers=self.num_workers,
@@ -89,7 +86,7 @@ class Chest14DataModule(LightningDataModule):
             )
         else:
             loader = DataLoader(
-                train_data,
+                dataset,
                 batch_size=self.batch_size,
                 shuffle=True,
                 num_workers=self.num_workers,
@@ -105,19 +102,14 @@ class Chest14DataModule(LightningDataModule):
         """
 
         dataset = self.DATASET(self.dataset_dir, 
+                               csv_path=self.csv_path, 
                                transform=self.transform, 
                                part="val", 
-                               binary=self.binary)
+                               target_class=self.target_class,
+                               seed=self.seed)
         
-        if "val" not in dataset.available_partitions:
-            # Split "train_val" into "train" and "val"
-            val_len = int(len(dataset)*self.val_split)
-            train_len = len(dataset) - val_len 
-            _ , val_data = random_split(dataset, 
-                                        [train_len, val_len], 
-                                        generator=torch.Generator().manual_seed(self.seed))
         loader = DataLoader(
-            val_data,
+            dataset,
             batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
@@ -129,13 +121,15 @@ class Chest14DataModule(LightningDataModule):
     
     def test_dataloader(self):
         """
-        Chest14 test data
+        CheXpert Temp test data (actually it is validation set)
         """
 
         dataset = self.DATASET(self.dataset_dir, 
+                               csv_path=self.csv_path, 
                                transform=self.transform, 
-                               part="test", 
-                               binary=self.binary)
+                               part="val", 
+                               target_class=self.target_class,
+                               seed=self.seed)
        
         loader = DataLoader(
             dataset,
@@ -146,5 +140,3 @@ class Chest14DataModule(LightningDataModule):
             drop_last=True
         )
         return loader
-        
-    

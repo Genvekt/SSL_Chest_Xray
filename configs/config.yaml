@@ -1,10 +1,3 @@
-pipeline:
-  baseline: True
-  pretrain: False
-  finetune: True
-
-weights:
-
 target_dataset: 
   batch_size: 16
   seed: 123456
@@ -14,10 +7,25 @@ target_dataset:
 target_transform:
   height: 256
 
-baseline:
-  model: "resnet18"
-  pretrained: True
+pipeline:
+  params:
+    model: 
+      name: "resnet18"
+      pretrained: True
+
+weights:
+
+logger:
+  _target_: pytorch_lightning.loggers.WandbLogger
+  name: "test"
+  project: "thesis"
+
+checkpoint:
+  _target_: pytorch_lightning.callbacks.ModelCheckpoint
+  monitor: "val_loss"
+
 
 defaults:
   - target_dataset: chest14
   - transform: basic
+  - pipeline: baselineAdam

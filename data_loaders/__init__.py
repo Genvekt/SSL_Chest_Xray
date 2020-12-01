@@ -3,11 +3,12 @@ from pathlib import Path
 import numpy as np
 from torch.utils.data import random_split, Dataset
 from data_loaders.chest_14_data_module import Chest14DataModule
-
+from data_loaders.chexpert_data_module import CheXpertDataModule
 
 DATASETS = {
     #"RSNA": [Path("/datasets/rsna"), RSNADataset],
-    "Chest14": [Path("/datasets/chest-14"), Chest14DataModule]
+    "Chest14": [Path("/datasets/chest-14"), Chest14DataModule],
+    "CheXpert": [Path("/new_data/CheXpert/CheXpert-v1.0"), CheXpertDataModule]
 #     "ChestPneumonia": [Path("/datasets/chest-xray-pneumonia"), ChestPneumoniaDataset],
 }
 

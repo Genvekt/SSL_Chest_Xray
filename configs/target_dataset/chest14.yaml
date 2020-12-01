@@ -1,6 +1,6 @@
 target_dataset:
   _target_: data_loaders.chest_14_data_module.Chest14DataModule
-  dataset_dir: Path("/datasets/chest-14")
+  dataset_dir: "/datasets/chest-14"
   val_split: 0.2
   binary: True
   transform: basic
