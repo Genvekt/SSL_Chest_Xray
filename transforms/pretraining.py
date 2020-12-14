@@ -20,6 +20,11 @@ class Moco2ChestTransforms:
         ])
 
     def __call__(self, inp):
+        if isinstance(inp, np.ndarray):
+            if len(inp.shape) == 3 and inp.shape[2] == 1:
+                inp = np.dstack([inp, inp, inp])
+            inp = transforms.ToPILImage()(inp)
+        
         q = self.train_transform(inp).contiguous()
         k = self.train_transform(inp).contiguous()
         return q, k

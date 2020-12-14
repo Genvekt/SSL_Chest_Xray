@@ -1,2 +1,0 @@
-target_transform:
-  _target_: transforms.finetuning.ChestTransforms

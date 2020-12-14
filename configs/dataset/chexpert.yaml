@@ -1,6 +1,0 @@
-dataset:
-  _target_: data_loaders.chexpert_data_module.CheXpertDataModule
-  dataset_dir: "/new_data/CheXpert/CheXpert-v1.0"
-  csv_path: "/home/intern/SSL_Chest_Xray/datasets/chexpert_train_fixed.csv"
-  val_split: 0.2
-  target_class: "Pleural Effusion"

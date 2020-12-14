@@ -1,4 +1,5 @@
 from torchvision import transforms
+import numpy as np
 
 class ChestTransforms:
     """
@@ -20,4 +21,9 @@ class ChestTransforms:
         ])
 
     def __call__(self, inp):
-        return self.train_transform(inp).contiguous()
+        if isinstance(inp, np.ndarray):
+            if len(inp.shape) == 3 and inp.shape[2] == 1:
+                inp = np.dstack([inp, inp, inp])
+            inp = transforms.ToPILImage()(inp)
+        inp = self.train_transform(inp).contiguous()
+        return inp

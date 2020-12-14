@@ -5,6 +5,7 @@ import numpy as np
 def showInRow(list_of_images, titles = None, 
               disable_ticks = False, vertical=False,
               tensor=False):
+    plt.figure(figsize=(20,20))
     tensor_to_img = transforms.ToPILImage()
     to_gray = transforms.Grayscale()
     count = len(list_of_images)

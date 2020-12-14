@@ -1,0 +1,53 @@
+datasets:
+  list: ["chest14"]
+  batch_size: 16
+  chest14:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/chest-14.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.cv2_dataset.CV2Dataset
+      parameters:
+        invert: False
+  
+  chexpert:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/chexpert.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.cv2_dataset.CV2Dataset
+      parameters:
+        invert: False
+
+  
+  rsna:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/rsna.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.dcom_dataset.DcomDataset
+      parameters:
+        invert: False
+
+  chest_xray_pneumonia:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/chest-xray-pneumonia.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.cv2_dataset.CV2Dataset
+      parameters:
+        invert: False
+
+  gb7_flg:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/gb7-flg.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.dcom_dataset.DcomDataset
+      parameters:
+        invert: True
+
+  tbx11k:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/tbx11k.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.cv2_dataset.CV2Dataset
+      parameters:
+        invert: False
+
+  
