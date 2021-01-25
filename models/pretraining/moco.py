@@ -6,8 +6,9 @@ from pl_bolts.metrics import mean
 
 
 class ModifiedMocoV2(MocoV2):
-    def __init__(self, pretrained:bool=False,**kwargs):
+    def __init__(self, pretrained:bool=False, linear:bool=False, **kwargs):
         self.pretrained=pretrained
+        self.linear=linear
         super().__init__(**kwargs)
         
     def init_encoders(self, base_encoder_name):
@@ -18,6 +19,10 @@ class ModifiedMocoV2(MocoV2):
         # Substitute last layer with correct output dimention
         change_output(encoder_q, self.hparams.emb_dim)
         change_output(encoder_k, self.hparams.emb_dim)
+
+        if self.linear:
+            freeze_features(encoder_q)
+            freeze_features(encoder_k)
 
         return encoder_q, encoder_k
     
@@ -53,7 +58,7 @@ class ModifiedMocoV2(MocoV2):
 
     def validation_step(self, batch, batch_idx):
 
-        (img_1, img_2), labels = batch["image"], batch["label"]
+        (img_1, img_2), labels = batch["image"], batch["target"]
 
         output, target = self(img_q=img_1, img_k=img_2)
         loss = F.cross_entropy(output, target.long())

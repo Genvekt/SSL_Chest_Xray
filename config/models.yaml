@@ -1,0 +1,58 @@
+models:
+
+  binary_baseline:
+    model:
+      _target_: models.finetuning.baseline.BaseLineClassifier
+    parameters:
+      num_classes: 2
+      learning_rate: 0.00003
+      b1: 0.9
+      b2: 0.0001
+      linear: False
+  
+  moco:
+    model:
+      _target_: models.pretraining.moco.ModifiedMocoV2
+    parameters:
+      pretrained: True
+      linear: False
+      base_encoder: "resnet18" 
+      num_negatives: 65536
+      batch_size: 16
+      num_workers: 2
+      learning_rate: 0.0001
+
+    transforms:
+      train:
+        _target_: transforms.pretraining.Moco2TrainTransforms
+        height: 256
+      val:
+        _target_: transforms.pretraining.Moco2TrainTransforms
+        height: 256
+
+
+  cpcv2:
+
+    model:
+      _target_: models.pretraining.cpcv2.CPCV2Modified
+    parameters:
+      encoder_name: 'resnet18'
+      patch_size: 16,
+      patch_overlap: 8
+      online_ft: True
+      task: 'cpc'
+      num_workers: 2
+      num_classes: 2
+      learning_rate: 1e-4
+      pretrained: True
+
+    transforms:
+      train:
+        _target_: transforms.pretraining.CPCTrainTransforms
+        patch_size: 8
+        overlap:
+      val:
+        _target_: transforms.pretraining.CPCEvalTransforms
+        patch_size: 8
+        overlap:
+

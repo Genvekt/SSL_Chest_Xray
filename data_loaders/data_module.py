@@ -12,18 +12,38 @@ import hydra
 from data_loaders.weighted_sampler import create_weighted_sampler
 
 class ChestDataModule(LightningDataModule):
-    def __init__(self, ds_list=None, batch_size=None, config=None, transform=None, balanced=False):
-        self.transform = transform
+    def __init__(self, ds_list=None, 
+                 batch_size=None, 
+                 num_workers=None, 
+                 config=None, 
+                 balanced=False, 
+                 train_fraction=None, 
+                 seed=None, num_classes=2):
+
+        super(ChestDataModule, self).__init__()
         config = config if config else self._load_yaml_config()
         self.config = config.datasets
         self.ds_list = ds_list if ds_list else self.config.list
         self.batch_size = batch_size if batch_size else self.config.batch_size
+        self.num_workers = num_workers if num_workers else self.config.num_workers
         self.balanced = balanced
+        self.train_fraction = train_fraction
+        self.seed = seed if seed else self.config.seed
+        self.num_classes = num_classes
 
         # Check that names are valid
         self.ds_list = [ds_name for ds_name in self.ds_list if ds_name in self.config]
         print("Loaded datasets:", ",".join(self.ds_list))
 
+    def get_transform_by_phase(self, phase):
+        if phase == "train":
+            return self.train_transforms
+        elif phase == "val":
+            return self.val_transforms
+        elif phase == "test":
+            return self.test_transforms
+        else:
+            return None
 
     def create_dataloader(self, phase):
         datasets = []
@@ -33,10 +53,20 @@ class ChestDataModule(LightningDataModule):
 
             csv_data = pd.read_csv(ds_meta.csv)
             csv_data = csv_data[csv_data["Phase"] == phase]
+            print("Before sampling length: ", len(csv_data))
+
+            # Sample train dataset if required.
+            # Class balance is preserved as each class is sampled separately
+            if phase == "train" and self.train_fraction is not None:
+                csv_data = csv_data.groupby('Target', group_keys=False).apply(
+                    lambda x: x.sample(int(len(x)*self.train_fraction), random_state=self.seed))
+
+            print("After sampling length: ", len(csv_data))
+            transform = self.get_transform_by_phase(phase)
 
             params.update({
                     'csv_data': csv_data,
-                    'transform': self.transform
+                    'transform': transform
                     })
 
             dataset = hydra.utils.instantiate(ds_meta.dataset.init, **params)
@@ -45,16 +75,32 @@ class ChestDataModule(LightningDataModule):
         datasets = ConcatDataset(datasets)
 
         dataloader_params = {}
-        
-        if self.balanced:
-            dataloader_params.update(
-                {"sampler": create_weighted_sampler(datasets, return_weights=False)})
 
+        dataloader_params.update(
+                {"sampler": None,
+                 "shuffle": False,
+                 "batch_size": self.batch_size,
+                 "num_workers":self.num_workers,
+                 "drop_last": True,
+                 "pin_memory": True
+                })
+        
+        if phase == "train":
+            if self.balanced:
+                dataloader_params.update(
+                    {"sampler": create_weighted_sampler(datasets, return_weights=False),
+                    "shuffle": False})
+            else:
+                dataloader_params.update(
+                    {"sampler": None,
+                     "shuffle": True,
+                    })
+            
+
+        
         dataloader = DataLoader(
             datasets,
-            batch_size=self.batch_size,
             **dataloader_params
-
         )
         return dataloader
 

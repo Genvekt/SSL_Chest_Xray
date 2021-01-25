@@ -1,6 +1,10 @@
 datasets:
+
   list: ["chest14"]
   batch_size: 16
+  num_workers: 2
+  seed: 123456
+
   chest14:
     csv: "/home/intern/SSL_Chest_Xray/datasets/chest-14.csv"
     dataset:
@@ -17,7 +21,6 @@ datasets:
       parameters:
         invert: False
 
-  
   rsna:
     csv: "/home/intern/SSL_Chest_Xray/datasets/rsna.csv"
     dataset:
@@ -44,6 +47,15 @@ datasets:
 
   tbx11k:
     csv: "/home/intern/SSL_Chest_Xray/datasets/tbx11k.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.cv2_dataset.CV2Dataset
+      parameters:
+        invert: False
+
+
+  vinbigdata:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/vinbigdata.csv"
     dataset:
       init:
         _target_: data_loaders.datasets.cv2_dataset.CV2Dataset

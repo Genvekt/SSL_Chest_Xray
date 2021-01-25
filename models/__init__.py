@@ -1,5 +1,8 @@
 from torchvision import models
 from torch import nn
+import pkg_resources
+import yaml
+from omegaconf import DictConfig
 
 def get_model(name, pretrained=False):
     model_class = getattr(models, name)
@@ -30,3 +33,8 @@ def freeze_features(model):
             for param in child.parameters():
                 param.requires_grad = False
                 
+
+def get_config(model_name):
+    config = pkg_resources.resource_stream(__name__, '../config/models.yaml')
+    full_conf = DictConfig(yaml.safe_load(config))
+    return full_conf.models[model_name]

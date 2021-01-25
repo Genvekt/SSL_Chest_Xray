@@ -20,7 +20,9 @@ class DcomDataset(Dataset):
             transform (callable, optional): Preprocessing transforms
             invert (bool): If true, black will be white and vise versa.
         """
+
        # self.dataset_dir = Path(dataset_dir) if not isinstance(dataset_dir, Path) else dataset_dir
+        super(DcomDataset, self).__init__()
         self.transform = transform
         self.csv_data = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data 
         self.invert = invert
@@ -47,8 +49,7 @@ class DcomDataset(Dataset):
 
         if self.transform:
             sample["image"]  = self.transform(sample["image"])
-
-        sample["image"] = self._img_to_tensor(sample['image'])
+            
         return sample
 
     def _get_label_and_path(self, idx):
@@ -98,13 +99,11 @@ class DcomDataset(Dataset):
 
     def _process_target(self, target):
         target = (
-            target.float()
+            target.long()
             if isinstance(target, torch.Tensor)
-            else torch.tensor(target).float()
+            else torch.tensor(target).long()
         )
-        target = torch.unsqueeze(target, -1)
-
         return target
 
     def _img_to_tensor(self, img):
-         return img.float() if isinstance(img, torch.Tensor) else torch.tensor(img).float()
+        return img.float() if isinstance(img, torch.Tensor) else torch.tensor(img).float()

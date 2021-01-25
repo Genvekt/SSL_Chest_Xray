@@ -52,6 +52,42 @@ def process_tbx11k_csv(image_root, csv_data):
     return csv_data
 
 
+def process_vinbigdata_csv(image_root, csv_data):
+    """
+    Insert full pathes to images in new Path column and assign proper targets
+    Args:
+        image_root: Path to dir with images
+        csv_data: Path to file of pundas.Dataframe
+
+    Returns:
+        updated pundas.Datasrame with correct image pathes in Path column
+    """
+    image_root = pathlib.Path(image_root) if not isinstance(image_root, pathlib.PosixPath) else image_root
+    csv_data = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data
+
+    # Define proper path for each image
+    csv_data["Path"] = str(image_root)+ "/" + csv_data["image_id"] + ".jpg"
+
+    # Define proper target fpr each image
+    csv_data["Target"] = (csv_data["class_name"] != "No finding").astype(np.uint8())
+
+    clean_dfs = []
+    for group_name, group_df in csv_data.groupby(by=["Path"]):
+        
+        label_sum = group_df['Target'].sum()
+        if label_sum > len(group_df)/2:
+            label = 1
+        else:
+            label = 0
+        
+        clean_df = pd.DataFrame([{"Path":group_name,"Target": label}])
+        clean_dfs.append(clean_df)
+
+    csv_data = pd.concat(clean_dfs)
+
+    return csv_data
+
+
 def create_pmeumonia_full_csv(dataset_dir):
     dataset_dir = pathlib.Path(dataset_dir) if not isinstance(dataset_dir, pathlib.PosixPath) else dataset_dir
     train_dir =  dataset_dir / "train"
@@ -213,3 +249,33 @@ def create_tbx11k_full_csv(dataset_dir):
         dataframes.append(csv_data)
 
     return pd.concat(dataframes) 
+
+
+def create_vinbigdata_full_csv(dataset_dir):
+    dataset_dir = pathlib.Path(dataset_dir) if not isinstance(dataset_dir, pathlib.PosixPath) else dataset_dir
+
+    train_dir =  dataset_dir / "train"
+    test_dir = dataset_dir / "test"
+
+    # Process train_val data
+    train_val_csv = process_vinbigdata_csv(train_dir, dataset_dir/"train.csv")
+    
+    # Split train_val data on train and val sets
+    train_csv, val_csv = train_test_split(train_val_csv, test_size=0.2, stratify=train_val_csv["Target"].values)
+    
+    # Process test data
+    #test_csv = process_vinbigdata_csv(test_dir, dataset_dir/"test.csv")
+
+    # Assign relevant phase
+    train_csv["Phase"] = "train"
+    val_csv["Phase"] = "val"
+    #test_csv["Phase"] = "test"
+
+    return pd.concat([train_csv, val_csv]) 
+
+
+
+
+
+
+
