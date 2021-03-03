@@ -42,6 +42,22 @@ def process_chexpert_csv(image_root, csv_data):
 
     return csv_data
 
+def process_chexpert_5_csv(image_root, csv_data):
+    image_root = pathlib.Path(image_root) if not isinstance(image_root, pathlib.PosixPath) else image_root
+    csv_data = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data
+
+    csv_data = csv_data[csv_data["Frontal/Lateral"] == "Frontal"]
+    csv_data["Path"] = str(image_root) + "/" + csv_data["Path"].str[14:]
+    csv_data = csv_data[(csv_data["Atelectasis"].notnull()) | (csv_data["Cardiomegaly"].notnull()) | (csv_data["Consolidation"].notnull()) | (csv_data["Edema"].notnull()) | (csv_data["Pleural Effusion"].notnull())]
+
+    csv_data["Atelectasis"] = (csv_data['Atelectasis'].notnull() & (csv_data['Atelectasis'] != 0.0)).astype(np.uint8())
+    csv_data["Cardiomegaly"] = (csv_data['Cardiomegaly'].notnull() & (csv_data['Cardiomegaly'] != 0.0)).astype(np.uint8())
+    csv_data["Consolidation"] = (csv_data['Consolidation'].notnull() & (csv_data['Consolidation'] != 0.0)).astype(np.uint8())
+    csv_data["Edema"] = (csv_data['Edema'].notnull() & (csv_data['Edema'] != 0.0)).astype(np.uint8())
+    csv_data["Pleural Effusion"] = (csv_data['Pleural Effusion'].notnull() & (csv_data['Pleural Effusion'] != 0.0)).astype(np.uint8())
+    
+    return csv_data
+
 
 def process_tbx11k_csv(image_root, csv_data):
     image_root = pathlib.Path(image_root) if not isinstance(image_root, pathlib.PosixPath) else image_root
@@ -223,6 +239,32 @@ def create_chexpert_full_csv(dataset_dir, csv_data):
     val_csv["Phase"] = "val"
 
     return pd.concat([train_csv, val_csv])
+
+def create_chexpert_5_full_csv(dataset_dir, csv_data):
+    dataset_dir = pathlib.Path(dataset_dir) if not isinstance(dataset_dir, pathlib.PosixPath) else dataset_dir
+    # Read full csv 
+    csv_data = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data
+
+    # Group by patient id
+    csv_data["patient"] = csv_data["Path"].str.split('/').str[2]
+
+    # Preprocess csv to have full paths to images and int labels pathology(1)/normal(0)
+    csv_data = process_chexpert_5_csv(dataset_dir, csv_data)
+    
+    # Split to have patient images only in 1 partition
+    train_data, val_data = train_test_split(
+                np.array(list(csv_data.groupby(by=["patient"]).indices.items()),dtype=object), 
+                test_size=0.2)
+    
+    train_csv = csv_data.iloc[np.concatenate(train_data[:,1])]
+    val_csv = csv_data.iloc[np.concatenate(val_data[:,1])]
+
+    # Assign relevant phase
+    train_csv["Phase"] = "train"
+    val_csv["Phase"] = "val"
+
+    return pd.concat([train_csv, val_csv])
+
 
 def create_tbx11k_full_csv(dataset_dir):
     dataset_dir = pathlib.Path(dataset_dir) if not isinstance(dataset_dir, pathlib.PosixPath) else dataset_dir

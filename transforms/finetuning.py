@@ -1,5 +1,16 @@
 from torchvision import transforms
+import torchvision.transforms.functional as F
 import numpy as np
+
+class SquarePad:
+	def __call__(self, image):
+		w, h = image.size
+		max_wh = np.max([w, h])
+		hp = int((max_wh - w) / 2)
+		vp = int((max_wh - h) / 2)
+		padding = (hp, vp, hp, vp)
+		return F.pad(image, padding, 0, 'constant')
+
 
 class ChestTrainTransforms:
     """
@@ -8,13 +19,15 @@ class ChestTrainTransforms:
     Chest:   https://arxiv.org/pdf/2010.05352v1.pdf
     """
 
+
     def __init__(self, height: int = 128):
         # image augmentation functions
         self.train_transform = transforms.Compose([
-            transforms.Resize((height,height)),
-            transforms.ColorJitter(brightness=0.25, contrast=0.25, saturation=0.25),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(10),
+            SquarePad(),
+            transforms.Resize((height,height), ),
+            transforms.RandomAffine(15, translate=(0.05,0.05), scale=(0.95, 1.05), shear=None, resample=0, fillcolor=0),
+            #transforms.RandomHorizontalFlip(),
+            #transforms.RandomRotation(15),
             transforms.ToTensor(),
             # ImageNet normalization
             transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
@@ -39,6 +52,7 @@ class ChestValTransforms:
     def __init__(self, height: int = 128):
         # image augmentation functions
         self.train_transform = transforms.Compose([
+            SquarePad(),
             transforms.Resize((height,height)),
             transforms.ToTensor(),
             # ImageNet normalization

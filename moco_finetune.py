@@ -14,13 +14,13 @@ import torch
 # ARGUMENTS
 #===========================================================================
 
-EXPERIMENT_NAME = "NL_vinbigdata_full"
+EXPERIMENT_NAME = "NL_pneumo_0.1_Adam_3e-5"
 SEED = 1234
 
 
 # DATA MODULE arguments
-DS_LIST = ['vinbigdata']
-TRAIN_FRACTION = 1
+DS_LIST = ['chest_xray_pneumonia']
+TRAIN_FRACTION = 0.1
 BATCH_SIZE = 16
 NUM_WORKERS = 2
 

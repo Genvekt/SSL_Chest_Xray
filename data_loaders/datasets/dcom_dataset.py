@@ -11,7 +11,7 @@ from pydicom.pixel_data_handlers.util import apply_voi_lut, apply_modality_lut
 
 class DcomDataset(Dataset):
     
-    def __init__(self, csv_data, transform=None, invert=False):
+    def __init__(self, csv_data, transform=None, invert=False, return_dict=True):
         """
         Basic dataset
         
@@ -26,6 +26,7 @@ class DcomDataset(Dataset):
         self.transform = transform
         self.csv_data = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data 
         self.invert = invert
+        self.return_dict = return_dict
     
     def __len__(self):
         """
@@ -42,15 +43,20 @@ class DcomDataset(Dataset):
         """
         label, img_path = self._get_label_and_path(idx)
         img = self.get_image(img_path)
-        sample = {}
-        sample["image"] = img
-        sample["path"] = img_path
-        sample["target"] = label
+        if self.return_dict:
+            sample = {}
+            sample["image"] = img
+            sample["path"] = img_path
+            sample["target"] = label
 
-        if self.transform:
-            sample["image"]  = self.transform(sample["image"])
-            
-        return sample
+            if self.transform:
+                sample["image"]  = self.transform(sample["image"])
+                
+            return sample
+        else:
+            if self.transform:
+                img = self.transform(img)
+            return img, label
 
     def _get_label_and_path(self, idx):
         """

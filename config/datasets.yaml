@@ -20,6 +20,22 @@ datasets:
         _target_: data_loaders.datasets.cv2_dataset.CV2Dataset
       parameters:
         invert: False
+  
+  chexpert_5:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/chexpert_5.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.chexpert_5.Chexpert5Dataset
+      parameters:
+        invert: False
+
+  chexpert_5_01:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/chexpert_5_01.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.chexpert_5.Chexpert5Dataset
+      parameters:
+        invert: False
 
   rsna:
     csv: "/home/intern/SSL_Chest_Xray/datasets/rsna.csv"

@@ -18,7 +18,7 @@ class ChestDataModule(LightningDataModule):
                  config=None, 
                  balanced=False, 
                  train_fraction=None, 
-                 seed=None, num_classes=2):
+                 seed=None, num_classes=2, return_dict=True):
 
         super(ChestDataModule, self).__init__()
         config = config if config else self._load_yaml_config()
@@ -30,6 +30,7 @@ class ChestDataModule(LightningDataModule):
         self.train_fraction = train_fraction
         self.seed = seed if seed else self.config.seed
         self.num_classes = num_classes
+        self.return_dict = return_dict
 
         # Check that names are valid
         self.ds_list = [ds_name for ds_name in self.ds_list if ds_name in self.config]
@@ -58,15 +59,22 @@ class ChestDataModule(LightningDataModule):
             # Sample train dataset if required.
             # Class balance is preserved as each class is sampled separately
             if phase == "train" and self.train_fraction is not None:
-                csv_data = csv_data.groupby('Target', group_keys=False).apply(
-                    lambda x: x.sample(int(len(x)*self.train_fraction), random_state=self.seed))
+                if "Target" in csv_data:
+                    csv_data = csv_data.groupby('Target', group_keys=False).apply(
+                        lambda x: x.sample(int(len(x)*self.train_fraction), random_state=self.seed))
+                else:
+                    csv_data = csv_data.sample(int(len(csv_data)*self.train_fraction), random_state=self.seed)
+
+
+
 
             print("After sampling length: ", len(csv_data))
             transform = self.get_transform_by_phase(phase)
 
             params.update({
                     'csv_data': csv_data,
-                    'transform': transform
+                    'transform': transform,
+                    'return_dict': self.return_dict
                     })
 
             dataset = hydra.utils.instantiate(ds_meta.dataset.init, **params)
@@ -87,6 +95,7 @@ class ChestDataModule(LightningDataModule):
         
         if phase == "train":
             if self.balanced:
+                print("Creating balanced dataloader")
                 dataloader_params.update(
                     {"sampler": create_weighted_sampler(datasets, return_weights=False),
                     "shuffle": False})
@@ -96,8 +105,6 @@ class ChestDataModule(LightningDataModule):
                      "shuffle": True,
                     })
             
-
-        
         dataloader = DataLoader(
             datasets,
             **dataloader_params
@@ -116,6 +123,16 @@ class ChestDataModule(LightningDataModule):
     def test_dataloader(self):
         return self.create_dataloader(phase="test")
 
+    # def get_size(self, phase):
+    #     total_len = 0
+    #     for ds_name in self.ds_list:
+    #         ds_meta = self.config[ds_name]
+    #         csv_data = pd.read_csv(ds_meta.csv)
+    #         csv_data = csv_data[csv_data["Phase"] == phase]
+
+    #         total_len += len(csv_data)
+            
+    #     return total_len
 
     def _load_yaml_config(self):
         """

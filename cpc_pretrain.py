@@ -15,17 +15,18 @@ import torch
 # ARGUMENTS
 #===========================================================================
 
-EXPERIMENT_NAME = "without_datamodule"
+EXPERIMENT_NAME = "vinbigdata_full_patch-64_overlap_32"
 SEED = 1234
 
 
 # DATA MODULE arguments
-DS_LIST = ['chest14']
+DS_LIST = ['vinbigdata']
 TRAIN_FRACTION = 1
 BATCH_SIZE = 16
 NUM_WORKERS = 2
-PATCH_SIZE = 32
-OVERLAP = 16
+PATCH_SIZE = 64
+OVERLAP = 32
+HEIGHT = 256
 
 # MOCO model arguments
 CPC_KWARGS = {
@@ -49,17 +50,17 @@ def pretrain(ds_list, train_fraction, batch_size, num_workers, seed, model_kwarg
                          balanced=True, train_fraction=train_fraction,
                          seed=seed)
 
-    dm.train_transforms = CPCTrainTransforms(patch_size=PATCH_SIZE, overlap=OVERLAP)
-    dm.val_transforms = CPCValTransforms(patch_size=PATCH_SIZE, overlap=OVERLAP)
+    dm.train_transforms = CPCTrainTransforms(patch_size=PATCH_SIZE, overlap=OVERLAP, height=HEIGHT)
+    dm.val_transforms = CPCValTransforms(patch_size=PATCH_SIZE, overlap=OVERLAP, height=HEIGHT)
 
     # Load model
     model_kwargs['num_classes'] = dm.num_classes
     model = CPCV2Modified(**model_kwargs)
 
-    wandb_logger = WandbLogger(name='cpc_pretrain'+EXPERIMENT_NAME,project='thesis')
+    wandb_logger = WandbLogger(name='cpc_pretrain_'+EXPERIMENT_NAME,project='thesis')
     checkpoint_callback = ModelCheckpoint(monitor='val_nce', 
                                           dirpath='logs/pretraining/cpc/', 
-                                          filename='cpc_'+EXPERIMENT_NAME+'-{epoch:02d}-{val_nce:.4f}')
+                                          filename=EXPERIMENT_NAME+'-{epoch:02d}-{val_nce:.4f}')
 
     trainer = pl.Trainer(gpus=1, deterministic=True,
                         logger=wandb_logger, callbacks=[checkpoint_callback])

@@ -14,17 +14,15 @@ import torch
 # ARGUMENTS
 #===========================================================================
 
-EXPERIMENT_NAME = "not_important_test"
+EXPERIMENT_NAME = "NL_vinbigdata_full_patch-64_overlap-32"
 SEED = 1234
 
 
 # DATA MODULE arguments
-DS_LIST = ['chest14']
+DS_LIST = ['vinbigdata']
 TRAIN_FRACTION = 1
 BATCH_SIZE = 16
 NUM_WORKERS = 2
-PATCH_SIZE = 32
-OVERLAP = 16
 
 # BASELINE model arguments
 BASELINE_KWARGS = {
@@ -49,16 +47,13 @@ def finetune(ds_list, train_fraction, batch_size, num_workers, seed, model_kwarg
     dm.train_transforms = ChestTrainTransforms(height=256)
     dm.val_transforms = ChestValTransforms(height=256)
 
-    model = CPCV2Modified.load_from_checkpoint("logs/pretraining/cpc/cpc_without_datamodule-epoch=01-val_nce=42.1558.ckpt")
-    model.encoder.name = model.hparams.encoder_name
-    model.patched = False
-    print("CPC2 model: ", model)
+    model = CPCV2Modified.load_from_checkpoint("logs/pretraining/cpc/vinbigdata_full_patch-64_overlap_32-epoch=05-val_nce=18.7650.ckpt")
+    model.finetune = True
 
-    classifier = BaseLineClassifier(model.encoder, **model_kwargs)
+    classifier = BaseLineClassifier(model, **model_kwargs)
+    print(classifier.model.finetune, "====================")
 
-    print("Classifier based on CPC2", classifier)
-
-    wandb_logger = WandbLogger(name='cpc_finetune'+EXPERIMENT_NAME,project='thesis')
+    wandb_logger = WandbLogger(name='cpc_finetune_'+EXPERIMENT_NAME,project='thesis')
     checkpoint_callback = ModelCheckpoint(monitor='val_loss', 
                                           dirpath='logs/finetune/cpc/', 
                                           filename=EXPERIMENT_NAME+'-{epoch:02d}-{val_loss:.4f}')

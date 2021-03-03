@@ -4,9 +4,10 @@ import math
 
 class CPCV2Modified(CPCV2):
 
-    def __init__(self, patched=True,**kwargs):
+    def __init__(self, finetune=False,**kwargs):
         super().__init__(**kwargs)
-        self.patched = patched
+        self.finetune = finetune
+        self.name = self.hparams.encoder_name
 
     def shared_step(self, batch):
 
@@ -28,19 +29,20 @@ class CPCV2Modified(CPCV2):
 
     def forward(self, img_1):
         # put all patches on the batch dim for simultaneous processing
-        if self.patched:
+        if not self.finetune:
             b, p, c, w, h = img_1.size()
             img_1 = img_1.view(-1, c, w, h)
 
         # Z are the latent vars
-        Z = self.encoder(img_1)
+        Z = self.encoder(img_1)[0]
 
-        if isinstance(Z, list):
-            Z = Z[0]
-
-        if self.patched:
+        if not self.finetune:
             # (?) -> (b, -1, nb_feats, nb_feats)
             Z = self.__recover_z_shape(Z, b)
+        else:
+            Z = self.encoder.avgpool(Z)
+            Z = torch.flatten(Z,1)
+            Z = self.encoder.fc(Z)
 
         return Z
 
