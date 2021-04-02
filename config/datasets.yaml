@@ -25,15 +25,25 @@ datasets:
     csv: "/home/intern/SSL_Chest_Xray/datasets/chexpert_5.csv"
     dataset:
       init:
-        _target_: data_loaders.datasets.chexpert_5.Chexpert5Dataset
+        _target_: data_loaders.datasets.chexpert.ChexpertDataset
       parameters:
         invert: False
+        targets: ["Atelectasis", "Cardiomegaly", "Consolidation", "Edema", "Pleural Effusion"]
+
+  chexpert_rare_6:
+    csv: "/home/intern/SSL_Chest_Xray/datasets/chexpert_rare_6.csv"
+    dataset:
+      init:
+        _target_: data_loaders.datasets.chexpert.ChexpertDataset
+      parameters:
+        invert: False
+        targets: ['No Finding', 'Enlarged Cardiomediastinum', 'Pneumonia', 'Pneumothorax', 'Lung Lesion', 'Fracture', 'Other']
 
   chexpert_5_01:
     csv: "/home/intern/SSL_Chest_Xray/datasets/chexpert_5_01.csv"
     dataset:
       init:
-        _target_: data_loaders.datasets.chexpert_5.Chexpert5Dataset
+        _target_: data_loaders.datasets.chexpert.ChexpertDataset
       parameters:
         invert: False
 

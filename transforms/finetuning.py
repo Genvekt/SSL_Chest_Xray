@@ -24,10 +24,9 @@ class ChestTrainTransforms:
         # image augmentation functions
         self.train_transform = transforms.Compose([
             SquarePad(),
-            transforms.Resize((height,height), ),
+            transforms.Resize((height,height)),
             transforms.RandomAffine(15, translate=(0.05,0.05), scale=(0.95, 1.05), shear=None, resample=0, fillcolor=0),
-            #transforms.RandomHorizontalFlip(),
-            #transforms.RandomRotation(15),
+            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             # ImageNet normalization
             transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
@@ -56,7 +55,7 @@ class ChestValTransforms:
             transforms.Resize((height,height)),
             transforms.ToTensor(),
             # ImageNet normalization
-            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
+            #transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
         ])
 
     def __call__(self, inp):

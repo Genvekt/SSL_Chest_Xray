@@ -21,16 +21,18 @@ class BaseLineClassifier(pl.LightningModule):
                  b_c = 0.2,
                  *args, **kwargs):
         super().__init__()
+        self.save_hyperparameters()
         self.multi_class = multi_class
         self.mixup = mixup
         self.ct_reg = ct_reg
         self.theta_low, self.theta_high = theta_low, theta_high
         self.b_c = b_c
-        self.save_hyperparameters()
+        
         self.model = model
         self.sigmoid = torch.nn.Sigmoid()
         self.bce = torch.nn.BCELoss(reduction='none')
         self.beta_distribution = torch.distributions.beta.Beta(alpha, alpha)
+        self.f1 = pl.metrics.classification.F1(num_classes, multilabel=multi_class, )
         change_output(self.model, num_classes)
         # Freeze everething but classifier
         if linear:
@@ -101,7 +103,7 @@ class BaseLineClassifier(pl.LightningModule):
                 preds = preds[0]
 
             loss = self.compute_basic_loss(preds, target)
-            acc = self.accuracy(preds, target)
+            f1 = self.f1(preds, target)
 
         else:
             mixed_imgs, targets1, targets2, lambdas, inv_lambdas = self.apply_mixup(x, target)
@@ -111,28 +113,28 @@ class BaseLineClassifier(pl.LightningModule):
                 preds = preds[0]
 
             loss = self.compute_mixup_loss(preds, targets1, targets2, lambdas, inv_lambdas)
-            acc = torch.tensor(0.0).type_as(loss)
+            f1 = torch.tensor(0.0).type_as(loss)
 
         if self.ct_reg:
             loss += self.b_c * self.compute_confidence_tempering(preds)
 
         log = {
             'train_step_loss': loss,
-            'train_step_acc': acc
+            'train_step_f1': f1
         }
 
         self.log_dict(log)
         
-        return {"loss":loss, 'train_loss': loss, 'train_acc': acc}
+        return {"loss":loss, 'train_loss': loss, 'train_f1': f1}
     
     
     def training_epoch_end(self, outputs):
         train_loss = mean(outputs, 'train_loss')
-        train_acc = mean(outputs, 'train_acc')
+        train_f1 = mean(outputs, 'train_f1')
 
         log = {
             'train_epoch_loss': train_loss,
-            'train_epoch_acc': train_acc,
+            'train_epoch_f1': train_f1,
             'train_lr': self.optimizers().param_groups[0]["lr"]
         }
         self.log_dict(log)
@@ -145,25 +147,23 @@ class BaseLineClassifier(pl.LightningModule):
             preds = preds[0]
 
         loss = self.compute_basic_loss(preds, target)
-        if self.multi_class:
-            acc = torch.tensor(0.0).type_as(loss)
-        else:
-            acc = self.accuracy(preds, target)
+
+        f1 = self.f1(preds, target)
 
         
         results = {
             'val_loss': loss,
-            'val_acc': acc
+            'val_f1': f1
         }
         return results
 
     def validation_epoch_end(self, outputs):
         val_loss = mean(outputs, 'val_loss')
-        val_acc = mean(outputs, 'val_acc')
+        val_f1 = mean(outputs, 'val_f1')
 
         log = {
             'val_loss': val_loss,
-            'val_acc': val_acc,
+            'val_f1': val_f1,
         }
         self.log_dict(log)
 
@@ -176,26 +176,23 @@ class BaseLineClassifier(pl.LightningModule):
             preds = preds[0]
 
         loss = self.compute_basic_loss(preds, target)
-        if self.multi_class:
-            acc = torch.tensor(0.0).type_as(loss)
-        else:
-            acc = self.accuracy(preds, target)
+        f1 = self.f1(preds, target)
 
 
         results = {
             'test_loss': loss,
-            'test_acc': acc
+            'test_f1': f1
         }
         return results
 
 
     def test_epoch_end(self, outputs):
         val_loss = mean(outputs, 'test_loss')
-        val_acc = mean(outputs, 'test_acc')
+        val_f1 = mean(outputs, 'test_f1')
 
         log = {
             'test_loss': val_loss,
-            'test_acc': val_acc,
+            'test_f1': val_f1,
         }
         self.log_dict(log)
 
@@ -205,7 +202,7 @@ class BaseLineClassifier(pl.LightningModule):
                                      self.hparams.learning_rate,
                                      betas=(self.hparams.b1, self.hparams.b2),
                                      weight_decay=self.hparams.weight_decay)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=3)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=2, verbose=True)
         return {"optimizer": optimizer,
                 "lr_scheduler":scheduler,
                 "monitor":'val_loss'}
