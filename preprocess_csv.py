@@ -1,4 +1,4 @@
-from data_loaders.csv_processors import create_chest14_full_csv, create_gb7_flg_full_csv, create_tbx11k_full_csv
+from data_loaders.csv_processors import create_chest14_full_csv, create_gb7_flg_full_csv, create_tbx11k_full_csv, create_chexpert_14_full_csv
 from data_loaders.csv_processors import create_chexpert_full_csv, create_pmeumonia_full_csv, create_rsna_full_csv
 from data_loaders.csv_processors import create_vinbigdata_full_csv, create_chexpert_5_full_csv, create_chexpert_rare_6_full_csv
 
@@ -30,8 +30,11 @@ if __name__ == "__main__":
     # df = create_chexpert_5_full_csv("/new_data/CheXpert", "/home/intern/SSL_Chest_Xray/datasets/chexpert_train_fixed.csv")
     # df.to_csv("/home/intern/SSL_Chest_Xray/datasets/chexpert_5.csv")
 
-    df = create_chexpert_rare_6_full_csv("/new_data/CheXpert", "/home/intern/SSL_Chest_Xray/datasets/chexpert_train_fixed.csv")
-    df.to_csv("/home/intern/SSL_Chest_Xray/datasets/chexpert_rare_6.csv")
+    # df = create_chexpert_rare_6_full_csv("/new_data/CheXpert", "/home/intern/SSL_Chest_Xray/datasets/chexpert_train_fixed.csv")
+    # df.to_csv("/home/intern/SSL_Chest_Xray/datasets/chexpert_rare_6.csv")
+
+    df = create_chexpert_14_full_csv("/new_data/CheXpert", "/home/intern/SSL_Chest_Xray/datasets/chexpert_train_fixed.csv")
+    df.to_csv("/home/intern/SSL_Chest_Xray/datasets/chexpert_14.csv")
 
 
 

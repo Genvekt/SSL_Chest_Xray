@@ -100,6 +100,37 @@ def process_chexpert_rare_6_csv(image_root, csv_data):
     return total_df
 
 
+def process_chexpert_14_csv(image_root, csv_data):
+    image_root = pathlib.Path(image_root) if not isinstance(image_root, pathlib.PosixPath) else image_root
+    df = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data
+
+    df = df[df["Frontal/Lateral"] == "Frontal"]
+    df["Path"] = str(image_root) + "/" + csv_data["Path"]
+
+    all_findings = [
+        'No Finding',
+        'Enlarged Cardiomediastinum',
+        'Cardiomegaly',
+        'Lung Opacity',
+        'Lung Lesion',
+        'Edema',
+        'Consolidation',
+        'Pneumonia',
+        'Atelectasis',
+        'Pneumothorax',
+        'Pleural Effusion',
+        'Pleural Other',
+        'Fracture',
+        'Support Devices'
+    ]
+
+
+    for f in all_findings:
+        df[f] = (df[f].notnull() & (df[f] != 0.0)).astype(np.uint8())
+
+    return df
+
+
 def process_tbx11k_csv(image_root, csv_data):
     image_root = pathlib.Path(image_root) if not isinstance(image_root, pathlib.PosixPath) else image_root
     csv_data = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data
@@ -291,6 +322,31 @@ def create_chexpert_5_full_csv(dataset_dir, csv_data):
 
     # Preprocess csv to have full paths to images and int labels pathology(1)/normal(0)
     csv_data = process_chexpert_5_csv(dataset_dir, csv_data)
+    
+    # Split to have patient images only in 1 partition
+    train_data, val_data = train_test_split(
+                np.array(list(csv_data.groupby(by=["patient"]).indices.items()),dtype=object), 
+                test_size=0.2)
+    
+    train_csv = csv_data.iloc[np.concatenate(train_data[:,1])]
+    val_csv = csv_data.iloc[np.concatenate(val_data[:,1])]
+
+    # Assign relevant phase
+    train_csv["Phase"] = "train"
+    val_csv["Phase"] = "val"
+
+    return pd.concat([train_csv, val_csv])
+
+def create_chexpert_14_full_csv(dataset_dir, csv_data):
+    dataset_dir = pathlib.Path(dataset_dir) if not isinstance(dataset_dir, pathlib.PosixPath) else dataset_dir
+    # Read full csv 
+    csv_data = pd.read_csv(csv_data) if not isinstance(csv_data, pd.DataFrame) else csv_data
+
+    # Group by patient id
+    csv_data["patient"] = csv_data["Path"].str.split('/').str[2]
+
+    # Preprocess csv to have full paths to images and int labels 1/0 for each finding, None -> 0, -1 -> 1
+    csv_data = process_chexpert_14_csv(dataset_dir, csv_data)
     
     # Split to have patient images only in 1 partition
     train_data, val_data = train_test_split(

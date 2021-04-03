@@ -33,6 +33,11 @@ class BaseLineClassifier(pl.LightningModule):
         self.bce = torch.nn.BCELoss(reduction='none')
         self.beta_distribution = torch.distributions.beta.Beta(alpha, alpha)
         self.f1 = pl.metrics.classification.F1(num_classes, multilabel=multi_class, )
+        self.auroc = pl.metrics.classification.AUROC(num_classes, pos_label=1, average='weighted')
+
+        self.targets_cache = []
+        self.preds_cache = []
+
         change_output(self.model, num_classes)
         # Freeze everething but classifier
         if linear:
@@ -41,6 +46,19 @@ class BaseLineClassifier(pl.LightningModule):
         
     def forward(self, x):
         return self.model(x)
+
+    def clear_cache(self):
+        self.targets_cache = []
+        self.preds_cache = []
+
+    def update_cache(self, probas, targets):
+        self.targets_cache.append(targets.cpu())
+        self.preds_cache.append(probas.detach().cpu())
+
+    def get_full_cache(self):
+        targets = torch.cat(self.targets_cache, dim=0)
+        preds = torch.cat(self.preds_cache, dim=0)
+        return preds, targets
 
     def compute_basic_loss(self, preds, target):
         if self.multi_class:
@@ -72,15 +90,20 @@ class BaseLineClassifier(pl.LightningModule):
 
     def compute_confidence_tempering(self, preds):
 
-        if self.multi_class:
-            probas = self.sigmoid(preds)
-        else:
-            probas = F.softmax(preds, dim=1)
+        probas = self.compute_probas(preds)
         per_class = torch.mean(probas, dim=0)
         eps = 1e-8
 
         confidence_tempering = torch.sum(torch.log(self.theta_low/(per_class+eps) + per_class/self.theta_high))
         return confidence_tempering
+
+    def compute_probas(self, preds):
+        if self.multi_class:
+            probas = self.sigmoid(preds)
+        else:
+            probas = F.softmax(preds, dim=1)
+
+        return probas
 
     def apply_mixup(self, images, tagets):
         batch_size = images.shape[0]
@@ -104,6 +127,9 @@ class BaseLineClassifier(pl.LightningModule):
 
             loss = self.compute_basic_loss(preds, target)
             f1 = self.f1(preds, target)
+            probas = self.compute_probas(preds)
+
+            self.update_cache(probas, target)
 
         else:
             mixed_imgs, targets1, targets2, lambdas, inv_lambdas = self.apply_mixup(x, target)
@@ -132,11 +158,20 @@ class BaseLineClassifier(pl.LightningModule):
         train_loss = mean(outputs, 'train_loss')
         train_f1 = mean(outputs, 'train_f1')
 
+        if not self.mixup:
+            train_epoch_p, train_epoch_t = self.get_full_cache()
+            train_auroc = self.auroc(train_epoch_p.cpu(), train_epoch_t.int().cpu()).type_as(train_loss)
+            self.clear_cache()
+        else:
+            train_auroc = torch.tensor(0.0).type_as(train_loss)
+
         log = {
             'train_epoch_loss': train_loss,
             'train_epoch_f1': train_f1,
+            'train_epoch_auroc': train_auroc,
             'train_lr': self.optimizers().param_groups[0]["lr"]
         }
+        print(log)
         self.log_dict(log)
    
     def validation_step(self, batch, batch_idx):
@@ -150,6 +185,9 @@ class BaseLineClassifier(pl.LightningModule):
 
         f1 = self.f1(preds, target)
 
+        probas = self.compute_probas(preds)
+        self.update_cache(probas, target)
+        
         
         results = {
             'val_loss': loss,
@@ -161,10 +199,17 @@ class BaseLineClassifier(pl.LightningModule):
         val_loss = mean(outputs, 'val_loss')
         val_f1 = mean(outputs, 'val_f1')
 
+        val_epoch_p, val_epoch_t = self.get_full_cache()
+        val_auroc = self.auroc(val_epoch_p.cpu(), val_epoch_t.int().cpu()).type_as(val_loss)
+        self.clear_cache()
+
+
         log = {
             'val_loss': val_loss,
             'val_f1': val_f1,
+            'val_auroc': val_auroc
         }
+        print(log)
         self.log_dict(log)
 
 
@@ -178,6 +223,8 @@ class BaseLineClassifier(pl.LightningModule):
         loss = self.compute_basic_loss(preds, target)
         f1 = self.f1(preds, target)
 
+        probas = self.compute_probas(preds)
+        self.update_cache(probas, target)
 
         results = {
             'test_loss': loss,
@@ -189,10 +236,16 @@ class BaseLineClassifier(pl.LightningModule):
     def test_epoch_end(self, outputs):
         val_loss = mean(outputs, 'test_loss')
         val_f1 = mean(outputs, 'test_f1')
+        
+        val_epoch_p, val_epoch_t = self.get_full_cache()
+        val_auroc = self.auroc(val_epoch_p.cpu(), val_epoch_t.int().cpu()).type_as(val_loss)
+        self.clear_cache()
+
 
         log = {
             'test_loss': val_loss,
             'test_f1': val_f1,
+            'test_auroc': val_auroc
         }
         self.log_dict(log)
 
